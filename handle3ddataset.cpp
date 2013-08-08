@@ -5,22 +5,12 @@ Handle3DDataset::Handle3DDataset(){}
 Handle3DDataset::Handle3DDataset(DATAINFO h_pp)
 {
 	HPP = h_pp;
-
-//	if(!loadFile()){ if(HPP.verboseMode) printf("Fail to load %s\n",HPP.inputFileName);return;}
-//	else{ if(HPP.verboseMode) printf("%s loaded!\n",HPP.inputFileName );}
-
-//	if(!changePlane()){ if(HPP.verboseMode) printf("Fail to change plane orientation\n"); return;}
-//	else{ if(HPP.verboseMode) printf("plane changed!\n");}
-
-//	if(!saveModifiedDataset()){ if(HPP.verboseMode) printf("Fail to save modified dataset\n");    return;}
-//	else{ if(HPP.verboseMode) printf("%s salved!\n", HPP.outputFileName );}
-
 }
 
 Handle3DDataset::~Handle3DDataset()
 {
-	free(datasetRaw);
-	free(datasetModified);
+//	free(datasetRaw);
+//	free(datasetModified);
 }
 
 bool Handle3DDataset::loadFile()
@@ -85,5 +75,17 @@ bool Handle3DDataset::saveModifiedDataset()
 	return true;
 }
 
+void Handle3DDataset::setDatasetInfo(DATAINFO h_pp)
+{
+	HPP = h_pp;
+}
 
+unsigned short** Handle3DDataset::getDataset()
+{
+	return datasetRaw;
+}
 
+DATAINFO Handle3DDataset::getDatasetInfo()
+{
+	return HPP;
+}

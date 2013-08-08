@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <fstream>
 
-#include "utils.h"
+#include "handle3ddataset_utils.h"
 
 class Handle3DDataset
 {
@@ -20,6 +20,9 @@ public:
 	bool loadFile();
 	bool saveModifiedDataset();
 	bool changePlane();
+	void setDatasetInfo(DATAINFO h_pp);
+	unsigned short** getDataset();
+	DATAINFO getDatasetInfo();
 private:
 	DATAINFO HPP;
 	unsigned short **datasetRaw, **datasetModified;
