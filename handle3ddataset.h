@@ -11,6 +11,7 @@
 
 #include "handle3ddataset_utils.h"
 
+#define ijn(a,b,n) ((a)*(n))+b
 
 template <class T>
 class Handle3DDataset
@@ -36,17 +37,21 @@ public:
 			datasetRaw[i] = (T*)malloc(sizeof(T) * (HPP.resHeight*HPP.resWidth));
 
 		// read file into dataset matrix
-		for( int i = 0; i < HPP.resDepth; i++ )
-			for( int j = 0; j < HPP.resWidth; j++ )
-				for( int l = 0; l < HPP.resHeight; l++ )
+		// int size = m_datasetInfo.resWidth*m_datasetInfo.resHeight*m_datasetInfo.resDepth;
+		// unsigned short *pVolume = new unsigned short[size];
+		// bool ok = (size == fread(pVolume,sizeof(unsigned short), size,pFile));
+
+		for( int d = 0; d < HPP.resDepth; d++ )
+			for( int w = 0; w < HPP.resWidth; w++ )
+				for( int h = 0; h < HPP.resHeight; h++ )
 				{
 					T value;
 					fread( &value, 1, sizeof(T), inFile );
-					datasetRaw[i][l*HPP.resWidth+j] = value;
+					datasetRaw[d][ijn(w,h,HPP.resWidth)] = value;
 				}
 
 		fclose(inFile);
-		return true;		
+		return true;
 	}
 
 	bool saveModifiedDataset()
@@ -74,14 +79,14 @@ public:
 			datasetModified[i] = (T*)malloc(sizeof(T) * (HPP.resWidth*HPP.resHeight));
 		
 		// tranfer the data to a new dataset with new view plane
-		for( int i = 0; i < HPP.resDepth; i++ )
-			for( int j = 0; j < HPP.resWidth; j++ )
-				for(int l = 0; l < HPP.resHeight; l++)
+		for( int d = 0; d < HPP.resDepth; d++ )
+			for( int w = 0; w < HPP.resWidth; w++ )
+				for(int h = 0; h < HPP.resHeight; h++)
 				{
-					if(HPP.viewOrientation == 'c')
-						datasetModified[i][l*HPP.resWidth+j] = datasetRaw[l][j*HPP.resWidth+i];
-					else if(HPP.viewOrientation == 's')
-						datasetModified[i][l*HPP.resWidth+j] = datasetRaw[l][i*HPP.resWidth+j];
+					if(HPP.viewOrientation == 's')
+						datasetModified[d][ijn(w,h,HPP.resWidth)] = datasetRaw[h][ijn(w,d,HPP.resWidth)];
+					else if(HPP.viewOrientation == 'c')
+						datasetModified[d][ijn(w,h,HPP.resWidth)] = datasetRaw[h][ijn(d,w,HPP.resWidth)];
 				}
 		return true;		
 	}
@@ -91,9 +96,12 @@ public:
 		HPP = h_pp;
 	}
 
-	T** getDataset()
+	T** getDataset(int plane)
 	{
-		return datasetRaw;
+		if(plane==0)
+			return datasetRaw;
+		else
+			return datasetModified;
 	}
 
 	DATAINFO getDatasetInfo()

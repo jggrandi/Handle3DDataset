@@ -1,5 +1,5 @@
-#ifndef UTILS
-#define UTILS
+#ifndef HANDLE3DDATASET_UTILS
+#define HANDLE3DDATASET_UTILS
 
 
 typedef struct data
@@ -15,5 +15,5 @@ typedef struct data
 }DATAINFO;
 
 
-#endif // UTILS
+#endif // HANDLE3DDATASET_UTILS
 
