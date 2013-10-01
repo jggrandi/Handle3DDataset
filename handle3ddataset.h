@@ -68,6 +68,20 @@ public:
 		return true;
 	}
 
+	bool saveModifiedDataset(char **datasetModified)
+	{
+		// open output dataset file
+		if(!(outFile = fopen(HPP.outputFileName, "wb+")))
+			return false;
+
+		//save the new view plane into a new raw file
+		for(int i = 0; i < HPP.resDepth; i++)
+			fwrite(datasetModified[i], 1, sizeof(T)*HPP.resWidth*HPP.resHeight, outFile);
+
+		fclose(outFile);
+		return true;
+	}
+
 	bool changePlane()
 	{
 		// change the the values of height to depth
@@ -90,6 +104,67 @@ public:
 				}
 		return true;		
 	}
+
+	char** changePlane( char viewOrientation)
+	{
+		// change the the values of height to depth
+		int rW = HPP.resWidth;
+		int rH = HPP.resHeight;
+		int rD = HPP.resDepth;
+
+		std::swap(rH,rD);
+		
+		// allocate memory for the 3d dataset
+		char **newOrientation = (T**)malloc(rD * sizeof(T*));
+		for (int i=0; i < rD; i++)
+			newOrientation[i] = (T*)malloc(sizeof(T) * (rW*rH));
+		
+		// tranfer the data to a new dataset with new view plane
+		for( int d = 0; d < rD; d++ )
+			for( int w = 0; w < rW; w++ )
+				for(int h = 0; h < rH; h++)
+				{
+					if(viewOrientation == 's')
+						newOrientation[d][ijn(w,h,rW)] = datasetRaw[h][ijn(w,d,rW)];
+					else if(viewOrientation == 'c')
+						newOrientation[d][ijn(w,h,rW)] = datasetRaw[h][ijn(d,w,rW)];
+				}
+		return newOrientation;		
+	}
+
+
+	char* arbitraryPlane(int planeNumber, char viewOrientation)
+	{
+		int rW = HPP.resWidth;
+		int rH = HPP.resHeight;
+		int rD = HPP.resDepth;
+
+		//allocate memory for the 2d image
+		char  *img = (char*)malloc(sizeof(char*)* rW*rH); 
+		char **newVolume;
+
+		
+		if(viewOrientation == 'c' || viewOrientation == 's')
+		{
+			// get the volume with view orientation changed
+			newVolume = changePlane(viewOrientation);
+			// change the the values of height to depth if 'coronal' or 'sagittal'
+			std::swap(rH,rD);	
+		}	
+	
+		// tranfer the data to a new dataset with new view plane
+		for( int d = 0; d < rD; d++ )
+			for( int w = 0; w < rW; w++ )
+				for(int h = 0; h < rH; h++)
+				{
+					if     (viewOrientation == 's' || viewOrientation == 'c')
+						img[ijn(w,h,rW)] = newVolume[planeNumber][ijn(w,h,rW)];
+					else if(viewOrientation == 'a')				
+						img[ijn(w,h,rW)] = datasetRaw[planeNumber][ijn(w,h,rW)];
+				}
+		return img;				
+	}
+
 
 	void setDatasetInfo(DATAINFO h_pp)
 	{
