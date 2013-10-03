@@ -4,9 +4,8 @@
 
 typedef struct data
 {
-    char *inputFileName;
-    char *outputFileName;
-    char viewOrientation;
+	char *fileName;
+	char viewOrientation;
     int  resWidth;
     int  resHeight;
     int  resDepth;
