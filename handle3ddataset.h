@@ -87,6 +87,33 @@ public:
 		fclose(outFile);
 		return true;
 	}
+	template <class D>
+	bool saveModifiedDataset(D **datasetToSave, DATAINFO INFO)
+	{
+		// open output dataset file
+		if(!(outFile = fopen(INFO.fileName, "wb+")))
+			return false;
+
+		//save the new view plane into a new raw file
+		for(int i = 0; i < INFO.resDepth; i++)
+			fwrite(datasetToSave[i], 1, sizeof(D)*INFO.resWidth*INFO.resHeight, outFile);
+
+		fclose(outFile);
+		return true;
+	}
+
+	bool saveModifiedImage(char *imageToSave, DATAINFO INFO)
+	{
+		// open output dataset file
+		if(!(outFile = fopen(INFO.fileName, "wb+")))
+			return false;
+
+		//save the new view plane into a new raw file
+		fwrite(imageToSave, 1, sizeof(T)*INFO.resWidth*INFO.resHeight, outFile);
+
+		fclose(outFile);
+		return true;
+	}
 
 	bool changePlane()
 	{
@@ -121,10 +148,10 @@ public:
 	{
 		// change the the values of height to depth
 		int rW = HPP_RAW.resWidth;
-		int rH = HPP_RAW.resHeight;
-		int rD = HPP_RAW.resDepth;
+		int rD = HPP_RAW.resHeight;
+		int rH = HPP_RAW.resDepth;
 
-		std::swap(rH,rD);
+		//std::swap(rH,rD);
 		
 		// allocate memory for the 3d dataset
 		T **newOrientation = (T**)malloc(rD * sizeof(T*));
@@ -172,7 +199,7 @@ public:
 			for(int h = 0; h < rH; h++)
 			{
 				if((viewOrientation == 'c' || viewOrientation == 's') && slope == 0)
-					img[ijn(w,h,rW)] = newVolume[planeNumber][ijn(w,h,rW)];,
+					img[ijn(w,h,rW)] = newVolume[planeNumber][ijn(w,h,rW)];
 				else if((viewOrientation == 'c' || viewOrientation == 's') && slope == 1)
 					img[ijn(w,h,rW)] = newVolume[d][ijn(h,w,rW)];
 				else if(viewOrientation == 'a' && slope == 0)
@@ -198,25 +225,25 @@ public:
 		return img;				
 	}
 
-	bool scale3dDataset(int outputFileSlices, int scaleDownFactor)
+	bool scale3dDataset(int slicesInit, int slicesEnd, int scaleDownFactor)
 	{
 		if(!clearDataset(1)){printf("Failed to clear struct\n"); return false; }
 
 		HPP_MOD.resWidth  = HPP_RAW.resWidth/scaleDownFactor;
 		HPP_MOD.resHeight = HPP_RAW.resHeight/scaleDownFactor;
-		HPP_MOD.resDepth  = outputFileSlices;
+		HPP_MOD.resDepth  = slicesEnd-slicesInit;
 
 		int xLimite = HPP_MOD.resWidth;
 		int yLimite = HPP_MOD.resHeight;
 
-		datasetModified = (T**)malloc(outputFileSlices * sizeof(T*));
-		for (int i=0; i < outputFileSlices; i++)
+		datasetModified = (T**)malloc(slicesEnd * sizeof(T*));
+		for (int i=0; i < slicesEnd; i++)
 			datasetModified[i] = (T*)malloc(sizeof(T) * (HPP_MOD.resWidth*HPP_MOD.resHeight));
 
-		for (int d = 0 ; d < outputFileSlices ; d++)
+		for (int d = slicesInit ; d < slicesEnd ; d++)
 			for( int w = 0; w < xLimite ; w++ )
 					for( int h = 0; h < yLimite ; h++)
-						datasetModified[d][ijn(w,h,xLimite)] = datasetRaw[d][ijn(w*HPP_MOD.resWidth*scaleDownFactor,h*scaleDownFactor,scaleDownFactor)];
+						datasetModified[d-slicesInit][ijn(w,h,xLimite)] = datasetRaw[d][ijn(w*HPP_MOD.resWidth*scaleDownFactor,h*scaleDownFactor,scaleDownFactor)];
 		return true;					
 	}
 
