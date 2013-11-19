@@ -74,7 +74,7 @@ public:
 		return true;
 	}
 
-	bool saveModifiedDataset(char **datasetToSave, DATAINFO INFO)
+	bool saveModifiedDataset(T **datasetToSave, DATAINFO INFO)
 	{
 		// open output dataset file
 		if(!(outFile = fopen(INFO.fileName, "wb+")))
@@ -102,7 +102,7 @@ public:
 		return true;
 	}
 
-	bool saveModifiedImage(char *imageToSave, DATAINFO INFO)
+	bool saveModifiedImage(T *imageToSave, DATAINFO INFO)
 	{
 		// open output dataset file
 		if(!(outFile = fopen(INFO.fileName, "wb+")))
@@ -179,7 +179,7 @@ public:
 		int rD = HPP_RAW.resDepth;
 
 		//allocate memory for the 2d image
-		T  *img = (char*)malloc(sizeof(char*)* rW*rH); 
+		T  *img = (T*)malloc(sizeof(T*)* rW*rH); 
 		T **newVolume;
 		
 		if((viewOrientation == 'c') || (viewOrientation == 's'))
