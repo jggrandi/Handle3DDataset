@@ -11,6 +11,8 @@
 
 #include "handle3ddataset_utils.h"
 
+#include "vector3f.h"
+
 #define ijn(a,b,n) ((a)*(n))+b
 
 template <class T>
@@ -172,41 +174,144 @@ public:
 	}
 
 
-	T* arbitraryPlane(int planeNumber, char viewOrientation, int slope )
+	T* arbitraryPlane()
 	{
+
 		int rW = HPP_RAW.resWidth;
 		int rH = HPP_RAW.resHeight;
 		int rD = HPP_RAW.resDepth;
 
-		//allocate memory for the 2d image
 		T  *img = (T*)malloc(sizeof(T*)* rW*rH); 
-		T **newVolume;
+
+		int var1 = rW/2; //8
+		int var2 = rW; //16
+		int var3 = rW/4; //8
+
+		vector3f p1(0,0,0);
+		vector3f p2(0,rH-1,2);
+		vector3f p3(rW-1,0,0);
+
+		vector3f v1 = sub(p2,p1);
+		vector3f v2 = sub(p3,p1);
+
+		vector3f dx1 =v1/1000;
+		vector3f dx2 =v2/1000;
+
+		//vector3f v1original = v1;
+		//vector3f v2original = v2;
+
+		v1.normalize();
+		v2.normalize();
 		
-		if((viewOrientation == 'c') || (viewOrientation == 's'))
+		vector3f interp1 = p1;// + dx1 + v1;
+		vector3f interp2 = p2;//+ dx2 + v2;
+		int w,h;
+		w=h=0;
+		
+		for (int w = 0; w < rW; w++)
 		{
-			// get the volume with view orientation changed
-			newVolume = changePlane(viewOrientation);
-			// change the the values of height to depth if 'coronal' or 'sagittal'
-			std::swap(rH,rD);	
-		}	
+			
+			printf("INTERP1:%d,%d,%d\n", (int)interp1.x,(int)interp1.y, (int)interp1.z );
+
+			for (int h = 0; h < rH; h++)
+			{
+				//printf("INTERP2:%d,%d,%d\n", (int)interp1.y,(int)interp2.x, (int)interp2.z );
+				img[ijn(w,h,rW)] = datasetRaw[(int)interp1.z][ijn((int)interp1.y,(int)interp2.x,rW)];
+				interp2 = interp2 + dx2 + v2;
+				
+			}
+			interp1 = interp1+ dx1 + v1;
+			interp2 = p2 + dx2 + v2;			
+		}
+
+
+		// while(interp1.y<=rH-1)
+		// {
+		// 	interp1 = interp1+ dx1 + v1;
+		// 	printf("INTERP1:%d,%d,%d\n", (int)interp1.x,(int)interp1.y, (int)interp1.z );
+			
+		// 	while(interp2.x<=rW-1)
+		// 	{
+		// 		interp2 = interp2 + dx2 + v2;
+		// 		printf("INTERP2:%d,%d,%d\n", (int)interp2.x,(int)interp2.y, (int)interp2.z );
+		// 		img[ijn(w,h,rW)] = datasetRaw[(int)interp1.z][ijn((int)interp1.y,(int)interp2.x,rW)];
+		// 		h++;				
+		// 	}
+		// 	w++;
+		// 	interp2 = p2 + dx2 + v2;
+		// }
+		 
+
+//		v1.x = abs(v1.x); v1.y = abs(v1.y); v1.z = abs(v1.z);
+//		v2.x = abs(v2.x); v2.y = abs(v2.y); v2.z = abs(v2.z);
+
+
+		// do
+		// {
+		// 	do
+		// 	{
+		// 		aux2 = v1+dx1+v1n;
+
+		// 	}
+		// 	while(aux2<=p1.x)
+
+		// }
+		// while(aux<=p2.y)
+
+
+		vector3f n = crossProduct(v1,v2);
+		float dot = dotProduct(n,v2);
+
+		// plane equation
+		// ax+by+cz+d=0
+
+		float result = dotProduct(n,p1);
+
+		float r2 = (n.x*p1.x)+(n.y*p1.y)+(n.z*p1.z)+result;
+
+		float C = (dot-(n.x*0)-(n.y*(rD-1)))/n.z;
+
+		vector3f vC(0,n.y,C);
+
+		float dotVC = dotProduct(vC,n);
+
+		printf("V1:%f,%f,%f\n",v1.x,v1.y,v1.z );
+		printf("V2:%f,%f,%f\n",v2.x,v2.y,v2.z );
+		printf("VNormal:%f,%f,%f\n",n.x,n.y,n.z );
+		printf("%f\n",dot );
+		printf("%f\n",result );
+		printf("%f\n",r2 );
+
+
+		//allocate memory for the 2d image
+		
+		//T **newVolume;
+		
+		// if((viewOrientation == 'c') || (viewOrientation == 's'))
+		// {
+		// 	// get the volume with view orientation changed
+		// 	newVolume = changePlane(viewOrientation);
+		// 	// change the the values of height to depth if 'coronal' or 'sagittal'
+		// 	std::swap(rH,rD);	
+		// }	
 
 		// tranfer the data to a new dataset with new view plane
 	//	for( int d = 0; d < rD; d++ )
 
 
-		int d = 0;
-		for( int w = 0; w < rW; w++, d++ )
-			for(int h = 0; h < rH; h++)
-			{
-				if((viewOrientation == 'c' || viewOrientation == 's') && slope == 0)
-					img[ijn(w,h,rW)] = newVolume[planeNumber][ijn(w,h,rW)];
-				else if((viewOrientation == 'c' || viewOrientation == 's') && slope == 1)
-					img[ijn(w,h,rW)] = newVolume[d][ijn(h,w,rW)];
-				else if(viewOrientation == 'a' && slope == 0)
-					img[ijn(w,h,rW)] = datasetRaw[planeNumber][ijn(w,h,rW)];
-				else if(viewOrientation == 'a' && slope == 1 )
-					img[ijn(w,h,rW)] = datasetRaw[d][ijn(h,w,rW)];
-			}
+		// int d = 0;
+		// for( int w = 0; w < rW; w++, d++ )
+		// 	for(int h = 0; h < rH; h++)
+		// 	{
+		// 		if((viewOrientation == 'c' || viewOrientation == 's') && slope == 0)
+		// 			img[ijn(w,h,rW)] = newVolume[planeNumber][ijn(w,h,rW)];
+		// 		else if((viewOrientation == 'c' || viewOrientation == 's') && slope == 1)
+		// 			img[ijn(w,h,rW)] = newVolume[d][ijn(h,w,rW)];
+		// 		else if(viewOrientation == 'a' && slope == 0)
+		// 			img[ijn(w,h,rW)] = datasetRaw[planeNumber][ijn(w,h,rW)];
+		// 		else if(viewOrientation == 'a' && slope == 1 )
+		// 			img[ijn(w,h,rW)] = datasetRaw[d][ijn(h,w,rW)];
+		// 	}
 
 		// int d = 0;
 		// int w2 = 0;

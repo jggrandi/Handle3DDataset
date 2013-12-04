@@ -7,6 +7,19 @@
 #$(CC) $(CFLAGS) $(SRC) $(SULFIX2) -o $(SRC) $(SULFIX1)
 
 
-g++ -c -fPIC handle3ddataset.h -o ../bin/handle3ddataset.o 
+all: makemyfiles
 
-# COMENTADA -> g++ -shared -o ../bin/libhandle3ddataset.so ../bin/handle3ddataset.o
+makemyfiles: vector3f.o
+	g++ -c -fPIC handle3ddataset.h ../../Array/vector3f.o -o ../bin/handle3ddataset.o 
+
+vector3f.o: ../../Array/vector3f.h 
+	g++ -c ../../Array/vector3f.h -o vector3f.o
+
+
+
+
+
+
+
+
+
