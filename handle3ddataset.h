@@ -62,6 +62,36 @@ public:
 		return true;
 	}
 
+	// from and to can be 0(char) or 1(unsigned int)
+	template<class K>
+	K**  changeBits(int to)
+	{
+
+		K** newBitAlloc = (K**)malloc(HPP_MOD.resDepth * sizeof(K*));
+		for (int i=0; i < HPP_MOD.resDepth; i++)
+			newBitAlloc[i] = (K*)malloc(sizeof(K) * (HPP_MOD.resHeight*HPP_MOD.resWidth));
+
+		for( int d = 0; d < HPP_MOD.resDepth; d++ )
+			for( int w = 0; w < HPP_MOD.resWidth; w++ )
+				for( int h = 0; h < HPP_MOD.resHeight; h++ )
+				{
+					unsigned int value = datasetRaw[d][ijn(w,h,HPP_MOD.resWidth)];
+					printf("%d\n",value );
+					if(to == 0)
+					{
+						char newVal = char(value);//*255)/65535;
+						
+						newBitAlloc[d][ijn(w,h,HPP_MOD.resWidth)] = newVal;
+					}
+					else if (to == 1)
+					{
+						unsigned int newVal = (value*65535)/255;
+						newBitAlloc[d][ijn(w,h,HPP_MOD.resWidth)] = newVal;
+					}
+				}		
+		return newBitAlloc;
+	}
+
 	bool saveModifiedDataset()
 	{
 		// open output dataset file
@@ -89,6 +119,8 @@ public:
 		fclose(outFile);
 		return true;
 	}
+
+
 	template <class D>
 	bool saveModifiedDataset(D **datasetToSave, DATAINFO INFO)
 	{
@@ -103,6 +135,24 @@ public:
 		fclose(outFile);
 		return true;
 	}
+
+	template <class D>
+	bool saveModifiedDataset(int to)
+	{
+		// open output dataset file
+		if(!(outFile = fopen(HPP_MOD.fileName, "wb+")))
+			return false;
+
+		D** datasetBitsChanged = changeBits<D>(to);
+
+		//save the new view plane into a new raw file
+		for(int i = 0; i < HPP_MOD.resDepth; i++)
+			fwrite(datasetBitsChanged[i], 1, sizeof(D)*HPP_MOD.resWidth*HPP_MOD.resHeight, outFile);
+
+		fclose(outFile);
+		return true;
+	}
+
 
 	bool saveModifiedImage(T *imageToSave, DATAINFO INFO)
 	{
@@ -187,14 +237,14 @@ public:
 		int var2 = rW; //16
 		int var3 = rW/4; //8
 
-		vector3f p1(0,0,0);
-		vector3f p2(0,rH-1,2);
-		vector3f p3(rW-1,0,0);
+		vector3f p1(10,0,10);
+		vector3f p2(10,rH,30);
+		vector3f p3(rW,0,0);
 
 		vector3f v1 = sub(p2,p1);
 		vector3f v2 = sub(p3,p1);
 
-		vector3f dx1 =v1/1000;
+		vector3f dx1 =v1/200; //qnto mais inclinado, diminuir o valor de dx
 		vector3f dx2 =v2/1000;
 
 		//vector3f v1original = v1;
@@ -205,23 +255,22 @@ public:
 		
 		vector3f interp1 = p1;// + dx1 + v1;
 		vector3f interp2 = p2;//+ dx2 + v2;
-		int w,h;
-		w=h=0;
-		
-		for (int w = 0; w < rW; w++)
+	
+		for (int w = 5; w < rW-5; w++)
 		{
 			
 			printf("INTERP1:%d,%d,%d\n", (int)interp1.x,(int)interp1.y, (int)interp1.z );
 
-			for (int h = 0; h < rH; h++)
+			for (int h = 5; h < rH-5; h++)
 			{
 				//printf("INTERP2:%d,%d,%d\n", (int)interp1.y,(int)interp2.x, (int)interp2.z );
 				img[ijn(w,h,rW)] = datasetRaw[(int)interp1.z][ijn((int)interp1.y,(int)interp2.x,rW)];
 				interp2 = interp2 + dx2 + v2;
-				
+				//h++;
 			}
+			vector3f aux = interp1;
 			interp1 = interp1+ dx1 + v1;
-			interp2 = p2 + dx2 + v2;			
+			interp2 = p2;			
 		}
 
 
