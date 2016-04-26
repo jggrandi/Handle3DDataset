@@ -10,8 +10,7 @@
 #include <fstream>
 
 #include "handle3ddataset_utils.h"
-
-#include "vector3f.h"
+#include <vector3f.h>
 
 #define ijn(a,b,n) ((a)*(n))+b
 
@@ -25,7 +24,6 @@ public:
 		HPP_RAW = h_pp_raw;
 		HPP_MOD = h_pp_mod;
 	}
-	
 	Handle3DDataset(DATAINFO h_pp_raw)
 	{
 		HPP_RAW = h_pp_raw;
@@ -167,6 +165,22 @@ public:
 		return true;
 	}
 
+	template <class D>
+	bool saveModifiedImage(D *imageToSave, DATAINFO INFO)
+	{
+		// open output dataset file
+		if(!(outFile = fopen(INFO.fileName, "wb+")))
+			return false;
+
+		//save the new view plane into a new raw file
+		fwrite(imageToSave, 1, sizeof(D)*INFO.resWidth*INFO.resHeight, outFile);
+
+		fclose(outFile);
+		return true;
+	}
+
+
+
 	bool changePlane()
 	{
 		if(!clearDataset(1)){printf("Failed to clear struct\n"); return false; }
@@ -224,51 +238,72 @@ public:
 	}
 
 
-	T* arbitraryPlane()
+
+
+// Direction vector from point (-1, 8, 0) to (2, 4, -3) = <3, -4, -3> 
+// Direction vector from point (-1, 8, 0) to (-1, 9, 2) = <0, 1, 2> 
+
+// Vector normal to plane is 
+// <3, -4, -3> x <0, 1, 2> = <-5, -6, 3> 
+// Vector -1 * <-5, -6, 3> = <5, 6, -3> is also normal to plane 
+
+// Using normal vector <5, 6, -3> and point (2, 4, -3), we get equation of plane: 
+// 5 (x-2) + 6 (y-4) - 3 (z+3) = 0 
+// 5x - 10 + 6y - 24 - 3z - 9 = 0 
+// 5x + 6y - 3z = 43
+
+	void arbitraryPlane(T *&img, int vp1, int vp2,float dxx1,float dxx2, vector3f &vec_normal, float &plane_d)
 	{
 
 		int rW = HPP_RAW.resWidth;
 		int rH = HPP_RAW.resHeight;
-		int rD = HPP_RAW.resDepth;
+		//int rD = HPP_RAW.resDepth;
 
-		T  *img = (T*)malloc(sizeof(T*)* rW*rH); 
+		//T  *img = (T*)calloc(rD,sizeof(T*)* rW*rH); 
 
-		int var1 = rW/2; //8
-		int var2 = rW; //16
-		int var3 = rW/4; //8
+		// int var1 = rW/2; //8
+		// int var2 = rW; //16
+		// int var3 = rW/4; //8
 
-		vector3f p1(10,0,10);
-		vector3f p2(10,rH,30);
-		vector3f p3(rW,0,0);
+		vector3f p1(0,0,(float)vp1);  // para inclinação lateral
+		vector3f p2(0,rH-1,(float)vp2);
+		vector3f p3(rW-1,0,(float)vp1);
+
+		// vector3f p1(0,0,10); //para inclinação frontal
+		// vector3f p2(rW,0,10);
+		// vector3f p3(0,rH,31);
+
+		// vector3f p1(0,10,0); //para inclinação vertical
+		// vector3f p2(0,10,rD-1);
+		// vector3f p3(rW-1,10,10);
+
 
 		vector3f v1 = sub(p2,p1);
 		vector3f v2 = sub(p3,p1);
 
-		vector3f dx1 =v1/200; //qnto mais inclinado, diminuir o valor de dx
-		vector3f dx2 =v2/1000;
-
-		//vector3f v1original = v1;
-		//vector3f v2original = v2;
+		vector3f dx1 =v1/(float)dxx1; //qnto mais inclinado, diminuir o valor de dx
+		vector3f dx2 =v2/(float)dxx2;
 
 		v1.normalize();
 		v2.normalize();
-		
+
 		vector3f interp1 = p1;// + dx1 + v1;
 		vector3f interp2 = p2;//+ dx2 + v2;
-	
-		for (int w = 5; w < rW-5; w++)
+
+		for (int w = 0; w < rW; w++)
 		{
 			
-			printf("INTERP1:%d,%d,%d\n", (int)interp1.x,(int)interp1.y, (int)interp1.z );
+			//printf("INTERP1:%d,%d,%d\n", (int)interp1.x,(int)interp1.y, (int)interp1.z );
 
-			for (int h = 5; h < rH-5; h++)
+			for (int h = 0; h < rH; h++)
 			{
-				//printf("INTERP2:%d,%d,%d\n", (int)interp1.y,(int)interp2.x, (int)interp2.z );
-				img[ijn(w,h,rW)] = datasetRaw[(int)interp1.z][ijn((int)interp1.y,(int)interp2.x,rW)];
+				img[ijn(w,h,rW)] = datasetRaw[(int)interp1.z][ijn((int)interp1.y,(int)interp2.x,rW)]; //para inclinação lateral
+				// img[ijn(h,w,rW)] = datasetRaw[(int)interp2.z][ijn((int)interp2.y,(int)interp1.x,rW)]; // para inclinação frontal
+//				img[ijn(h,w,rW)] = datasetRaw[(int)interp1.y][ijn((int)interp2.x,(int)interp1.z,rW)]; // para inclinação vertical
 				interp2 = interp2 + dx2 + v2;
 				//h++;
 			}
-			vector3f aux = interp1;
+			//vector3f aux = interp1;
 			interp1 = interp1+ dx1 + v1;
 			interp2 = p2;			
 		}
@@ -308,32 +343,31 @@ public:
 		// while(aux<=p2.y)
 
 
-		vector3f n = crossProduct(v1,v2);
-		float dot = dotProduct(n,v2);
-
-		// plane equation
-		// ax+by+cz+d=0
-
-		float result = dotProduct(n,p1);
-
-		float r2 = (n.x*p1.x)+(n.y*p1.y)+(n.z*p1.z)+result;
-
-		float C = (dot-(n.x*0)-(n.y*(rD-1)))/n.z;
-
-		vector3f vC(0,n.y,C);
-
-		float dotVC = dotProduct(vC,n);
-
-		printf("V1:%f,%f,%f\n",v1.x,v1.y,v1.z );
-		printf("V2:%f,%f,%f\n",v2.x,v2.y,v2.z );
-		printf("VNormal:%f,%f,%f\n",n.x,n.y,n.z );
-		printf("%f\n",dot );
-		printf("%f\n",result );
-		printf("%f\n",r2 );
 
 
-		//allocate memory for the 2d image
+		vector3f n = -crossProduct(v1,v2);
+		//p1.normalize();
 		
+		vector3f cn(n.z,n.y,n.x);
+
+
+		//vector3f other = p3/2;
+		vector3f p3n(p3.x/HPP_RAW.resWidth*2-1, p3.y/HPP_RAW.resWidth*2-1,p3.z/HPP_RAW.resWidth*2-1);
+
+        float  d = -dotProduct(p3n,n);
+		
+
+		//d = d/HPP_RAW.resWidth*2-1;
+
+		// printf("V1:%f,%f,%f\n",v1.x,v1.y,v1.z );
+		// printf("V2:%f,%f,%f\n",v2.x,v2.y,v2.z );
+		// printf("VNormal:%f,%f,%f\n",n.z,n.y,n.x );
+		// printf("%f\n",d );
+
+		vec_normal = cn;
+		plane_d = d;
+		//allocate memory for the 2d image
+
 		//T **newVolume;
 		
 		// if((viewOrientation == 'c') || (viewOrientation == 's'))
@@ -376,7 +410,8 @@ public:
 		// 		else if(viewOrientation == 'a' && slope == 1 )
 		// 			img[ijn(w,h,rW)] = datasetRaw[d][ijn(h,w,rW)];
 		// 	}
-		return img;				
+
+		//return img;				
 	}
 
 	bool scale3dDataset(int slicesInit, int slicesEnd, int scaleDownFactor)
@@ -423,6 +458,8 @@ public:
 			return HPP_RAW;
 		else if (option == 1)
 			return HPP_MOD;
+		else
+			return HPP_RAW;
 	}
 
 	bool clearDatasetInfo(int option)
